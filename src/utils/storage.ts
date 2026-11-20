@@ -1,72 +1,139 @@
-import type { Folder, Note } from '../types'
+import type { Folder, Note } from "../types";
 
-const KEY = 'note:notes'
-const FOLDERS_KEY = 'note:folders'
-const WELCOME_RESET_KEY = 'note:welcome-reset-v1'
-const starter: Note = { id: 'welcome', title: 'Welcome to Note', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), content: `# Welcome to Note\n\nA focused workspace for writing developer documentation in Markdown.\n\n## Quick start\n\n- Create a note from the sidebar\n- Write Markdown in the editor\n- Watch the preview update as you type\n- Export finished notes as a Markdown file\n\n## Code blocks\n\n~~~typescript\nconst greeting = 'Ship something useful.'\nconsole.log(greeting)\n~~~\n\n> Keep your docs close to the code.\n` }
+const KEY = "note:notes";
+const FOLDERS_KEY = "note:folders";
+const WELCOME_RESET_KEY = "note:welcome-reset-v1";
+const starter: Note = {
+  id: "welcome",
+  title: "Welcome to Note",
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+  content: `# Welcome to Note\n\nA focused workspace for writing developer documentation in Markdown.\n\n## Quick start\n\n- Create a note from the sidebar\n- Write Markdown in the editor\n- Watch the preview update as you type\n- Export finished notes as a Markdown file\n\n## Code blocks\n\n~~~typescript\nconst greeting = 'Ship something useful.'\nconsole.log(greeting)\n~~~\n\n> Keep your docs close to the code.\n`,
+};
 
 export function loadNotes(): Note[] {
   try {
-    if (localStorage.getItem(WELCOME_RESET_KEY) !== 'done') {
-      localStorage.setItem(WELCOME_RESET_KEY, 'done')
-      localStorage.setItem(KEY, JSON.stringify([starter]))
-      return [starter]
+    if (localStorage.getItem(WELCOME_RESET_KEY) !== "done") {
+      localStorage.setItem(WELCOME_RESET_KEY, "done");
+      localStorage.setItem(KEY, JSON.stringify([starter]));
+      return [starter];
     }
-    const raw = localStorage.getItem(KEY)
-    if (!raw) return [starter]
-    const parsed = JSON.parse(raw)
-    if (!Array.isArray(parsed)) return [starter]
-    const valid = parsed.filter((n): n is Note => n && typeof n.id === 'string' && typeof n.title === 'string' && typeof n.content === 'string')
-    return valid.length ? valid : [starter]
-  } catch { return [starter] }
+    const raw = localStorage.getItem(KEY);
+    if (!raw) return [starter];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [starter];
+    const valid = parsed.filter(
+      (n): n is Note =>
+        n &&
+        typeof n.id === "string" &&
+        typeof n.title === "string" &&
+        typeof n.content === "string",
+    );
+    return valid.length ? valid : [starter];
+  } catch {
+    return [starter];
+  }
 }
 
-export function saveNotes(notes: Note[]) { try { localStorage.setItem(KEY, JSON.stringify(notes)) } catch { /* storage may be unavailable */ } }
+export function saveNotes(notes: Note[]) {
+  try {
+    localStorage.setItem(KEY, JSON.stringify(notes));
+  } catch {
+    /* storage may be unavailable */
+  }
+}
 
 export function loadFolders(): Folder[] {
   try {
-    const raw = localStorage.getItem(FOLDERS_KEY)
-    if (!raw) return []
-    const parsed = JSON.parse(raw)
-    return Array.isArray(parsed) ? parsed.filter((f): f is Folder => f && typeof f.id === 'string' && typeof f.name === 'string') : []
-  } catch { return [] }
+    const raw = localStorage.getItem(FOLDERS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed)
+      ? parsed.filter(
+          (f): f is Folder =>
+            f && typeof f.id === "string" && typeof f.name === "string",
+        )
+      : [];
+  } catch {
+    return [];
+  }
 }
 
-export function saveFolders(folders: Folder[]) { try { localStorage.setItem(FOLDERS_KEY, JSON.stringify(folders)) } catch { /* storage may be unavailable */ } }
+export function saveFolders(folders: Folder[]) {
+  try {
+    localStorage.setItem(FOLDERS_KEY, JSON.stringify(folders));
+  } catch {
+    /* storage may be unavailable */
+  }
+}
 
 function markdownFilename(note: Note) {
-  const title = note.title.trim() || 'untitled-note'
-  const safeTitle = title.replace(/[\\/:*?"<>|]/g, '-').replace(/\s+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '')
-  return `${safeTitle || note.id}.md`
+  const title = note.title.trim() || "untitled-note";
+  const safeTitle = title
+    .replace(/[\\/:*?"<>|]/g, "-")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+  return `${safeTitle || note.id}.md`;
 }
 
 export async function saveNotesAsMarkdown(notes: Note[], folders: Folder[]) {
-  const picker = (window as Window & { showDirectoryPicker?: () => Promise<FileSystemDirectoryHandle> }).showDirectoryPicker
-  if (!picker) throw new Error('Your browser does not support saving to a local folder.')
-  const parent = await picker()
-  const notesDirectory = await parent.getDirectoryHandle('notes', { create: true })
-  const foldersById = new Map(folders.map(folder => [folder.id, folder.name]))
+  const picker = (
+    window as Window & {
+      showDirectoryPicker?: () => Promise<FileSystemDirectoryHandle>;
+    }
+  ).showDirectoryPicker;
+  if (!picker)
+    throw new Error("Your browser does not support saving to a local folder.");
+  const parent = await picker();
+  const notesDirectory = await parent.getDirectoryHandle("notes", {
+    create: true,
+  });
+  const foldersById = new Map(
+    folders.map((folder) => [folder.id, folder.name]),
+  );
 
   for (const note of notes) {
-    const noteDirectory = note.folderId && foldersById.has(note.folderId)
-      ? await notesDirectory.getDirectoryHandle(foldersById.get(note.folderId)!, { create: true })
-      : notesDirectory
-    const file = await noteDirectory.getFileHandle(markdownFilename(note), { create: true })
-    const writable = await file.createWritable()
-    await writable.write(`# ${note.title || 'Untitled note'}\n\n${note.content}`)
-    await writable.close()
+    const noteDirectory =
+      note.folderId && foldersById.has(note.folderId)
+        ? await notesDirectory.getDirectoryHandle(
+            foldersById.get(note.folderId)!,
+            { create: true },
+          )
+        : notesDirectory;
+    const file = await noteDirectory.getFileHandle(markdownFilename(note), {
+      create: true,
+    });
+    const writable = await file.createWritable();
+    await writable.write(
+      `# ${note.title || "Untitled note"}\n\n${note.content}`,
+    );
+    await writable.close();
   }
 }
 
 export async function saveImage(file: File) {
-  const picker = (window as Window & { showDirectoryPicker?: () => Promise<FileSystemDirectoryHandle> }).showDirectoryPicker
-  if (!picker) throw new Error('Your browser does not support saving images to a local folder.')
-  const parent = await picker()
-  const imagesDirectory = await parent.getDirectoryHandle('images', { create: true })
-  const safeName = file.name.replace(/[\\/:*?"<>|]/g, '-').replace(/\s+/g, '-').replace(/-+/g, '-') || `image-${Date.now()}`
-  const image = await imagesDirectory.getFileHandle(safeName, { create: true })
-  const writable = await image.createWritable()
-  await writable.write(file)
-  await writable.close()
-  return `images/${safeName}`
+  const picker = (
+    window as Window & {
+      showDirectoryPicker?: () => Promise<FileSystemDirectoryHandle>;
+    }
+  ).showDirectoryPicker;
+  if (!picker)
+    throw new Error(
+      "Your browser does not support saving images to a local folder.",
+    );
+  const parent = await picker();
+  const imagesDirectory = await parent.getDirectoryHandle("images", {
+    create: true,
+  });
+  const safeName =
+    file.name
+      .replace(/[\\/:*?"<>|]/g, "-")
+      .replace(/\s+/g, "-")
+      .replace(/-+/g, "-") || `image-${Date.now()}`;
+  const image = await imagesDirectory.getFileHandle(safeName, { create: true });
+  const writable = await image.createWritable();
+  await writable.write(file);
+  await writable.close();
+  return `images/${safeName}`;
 }

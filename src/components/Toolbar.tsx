@@ -1,4 +1,67 @@
-import type { Note } from '../types'
-export default function Toolbar({ note, saveStatus, onSave, onExport, onAddImage, mobileView, setMobileView }: { note: Note; saveStatus: string; onSave: () => void; onExport: () => void; onAddImage: (file: File) => void; mobileView: 'edit' | 'preview'; setMobileView: (view: 'edit' | 'preview') => void }) {
-  return <div className="toolbar"><div className="breadcrumbs"><span className="crumb-muted">Notes</span><span>/</span><strong>{note.title || 'Untitled note'}</strong></div><div className="toolbar-actions"><div className="mobile-toggle"><button className={mobileView === 'edit' ? 'selected' : ''} onClick={() => setMobileView('edit')}>Edit</button><button className={mobileView === 'preview' ? 'selected' : ''} onClick={() => setMobileView('preview')}>Preview</button></div><label className="button subtle">Add image<input type="file" accept="image/*" hidden onChange={event => { const file = event.target.files?.[0]; if (file) onAddImage(file); event.target.value = '' }} /></label><span className="save-status"><span className="status-dot" />{saveStatus}</span><button className="button subtle" onClick={onSave}>Save</button><button className="button primary" onClick={onExport}>Export <span>↗</span></button></div></div>
+import type { Note } from "../types";
+export default function Toolbar({
+  note,
+  saveStatus,
+  onSave,
+  onExport,
+  onAddImage,
+  mobileView,
+  setMobileView,
+}: {
+  note: Note;
+  saveStatus: string;
+  onSave: () => void;
+  onExport: () => void;
+  onAddImage: (file: File) => void;
+  mobileView: "edit" | "preview";
+  setMobileView: (view: "edit" | "preview") => void;
+}) {
+  return (
+    <div className="toolbar">
+      <div className="breadcrumbs">
+        <span className="crumb-muted">Notes</span>
+        <span>/</span>
+        <strong>{note.title || "Untitled note"}</strong>
+      </div>
+      <div className="toolbar-actions">
+        <div className="mobile-toggle">
+          <button
+            className={mobileView === "edit" ? "selected" : ""}
+            onClick={() => setMobileView("edit")}
+          >
+            Edit
+          </button>
+          <button
+            className={mobileView === "preview" ? "selected" : ""}
+            onClick={() => setMobileView("preview")}
+          >
+            Preview
+          </button>
+        </div>
+        <label className="button subtle">
+          Add image
+          <input
+            type="file"
+            accept="image/*"
+            hidden
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (file) onAddImage(file);
+              event.target.value = "";
+            }}
+          />
+        </label>
+        <span className="save-status">
+          <span className="status-dot" />
+          {saveStatus}
+        </span>
+        <button className="button subtle" onClick={onSave}>
+          Save
+        </button>
+        <button className="button primary" onClick={onExport}>
+          Export <span>↗</span>
+        </button>
+      </div>
+    </div>
+  );
 }
