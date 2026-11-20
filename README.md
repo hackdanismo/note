@@ -1,6 +1,6 @@
-# DevNotes
+# Note
 
-DevNotes is a local-first Markdown workspace for developer documentation. Notes are stored in the browser's `localStorage`; no backend or account is required.
+Note is a local-first Markdown workspace for developer documentation. Notes are stored in the browser's `localStorage`; clicking Save also writes the active note as a Markdown file in a local `notes` folder.
 
 ## Run locally
 
