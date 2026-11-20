@@ -1,6 +1,6 @@
 # Note
 
-Note is a local-first Markdown workspace for developer documentation. Notes are stored in the browser's `localStorage`; clicking Save also writes the active note as a Markdown file in a local `notes` folder.
+Note is a local-first Markdown workspace for developer documentation. Notes are stored in the browser's `localStorage` and in a local `notes` folder. On first launch, choose the application's root folder when prompted; Note creates `notes` if needed and imports Markdown files from it on startup. The selected folder is remembered by the browser.
 
 ## Run locally
 

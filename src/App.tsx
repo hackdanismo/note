@@ -5,6 +5,7 @@ import MarkdownPreview from "./components/MarkdownPreview";
 import {
   loadFolders,
   loadNotes,
+  initializeNotesDirectory,
   saveFolders,
   saveNotes,
   saveNotesAsMarkdown,
@@ -21,8 +22,8 @@ function App() {
   const [expandedFolders, setExpandedFolders] = useState<string[]>([]);
   const [activeId, setActiveId] = useState(
     () =>
-      loadNotes().find((note) => note.id === "welcome")?.id ||
-      loadNotes()[0]?.id ||
+      notes.find((note) => note.id === "welcome")?.id ||
+      notes[0]?.id ||
       "",
   );
   const [saveStatus, setSaveStatus] = useState("Saved locally");
@@ -31,6 +32,11 @@ function App() {
     () => notes.find((n) => n.id === activeId) || notes[0],
     [notes, activeId],
   );
+  useEffect(() => {
+    initializeNotesDirectory()
+      .then((imported) => { if (imported) setNotes(imported); })
+      .catch(() => undefined);
+  }, []);
   useEffect(() => {
     saveNotes(notes);
   }, [notes]);

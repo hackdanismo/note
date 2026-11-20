@@ -3,6 +3,8 @@ import type { Folder, Note } from "../types";
 const KEY = "note:notes";
 const FOLDERS_KEY = "note:folders";
 const WELCOME_RESET_KEY = "note:welcome-reset-v1";
+const DIRECTORY_DB = "note:filesystem";
+const DIRECTORY_STORE = "handles";
 const starter: Note = {
   id: "welcome",
   title: "Welcome to Note",
@@ -67,6 +69,65 @@ export function saveFolders(folders: Folder[]) {
   }
 }
 
+function openDirectoryDatabase(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DIRECTORY_DB, 1);
+    request.onupgradeneeded = () => request.result.createObjectStore(DIRECTORY_STORE);
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function getDirectoryHandle() {
+  try {
+    const db = await openDirectoryDatabase();
+    return await new Promise<FileSystemDirectoryHandle | undefined>((resolve, reject) => {
+      const request = db.transaction(DIRECTORY_STORE, "readonly").objectStore(DIRECTORY_STORE).get("root");
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  } catch { return undefined; }
+}
+
+async function rememberDirectoryHandle(handle: FileSystemDirectoryHandle) {
+  const db = await openDirectoryDatabase();
+  await new Promise<void>((resolve, reject) => {
+    const request = db.transaction(DIRECTORY_STORE, "readwrite").objectStore(DIRECTORY_STORE).put(handle, "root");
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+  });
+}
+
+function noteFromMarkdown(name: string, content: string): Note {
+  const titleMatch = content.match(/^#\s+(.+)\s*\r?\n(?:\r?\n)?/);
+  const title = titleMatch?.[1].trim() || name.replace(/\.md$/i, "") || "Untitled note";
+  return { id: `file-${name}-${content.length}`, title, content: titleMatch ? content.slice(titleMatch[0].length) : content, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+}
+
+async function readMarkdownNotes(directory: FileSystemDirectoryHandle): Promise<Note[]> {
+  const notes: Note[] = [];
+  for await (const [name, entry] of (directory as any).entries()) {
+    if (entry.kind !== "file" || !name.toLowerCase().endsWith(".md")) continue;
+    const file = await entry.getFile();
+    notes.push(noteFromMarkdown(name, await file.text()));
+  }
+  return notes;
+}
+
+export async function initializeNotesDirectory(): Promise<Note[] | null> {
+  const picker = (window as Window & { showDirectoryPicker?: () => Promise<FileSystemDirectoryHandle> }).showDirectoryPicker;
+  if (!picker) return null;
+  let parent = await getDirectoryHandle();
+  if (!parent) { parent = await picker(); await rememberDirectoryHandle(parent); }
+  else {
+    const handle = parent as any;
+    if (handle.queryPermission && (await handle.queryPermission({ mode: "read" })) !== "granted") await handle.requestPermission({ mode: "read" });
+  }
+  const notesDirectory = await parent.getDirectoryHandle("notes", { create: true });
+  const notes = await readMarkdownNotes(notesDirectory);
+  return notes.length ? notes : null;
+}
+
 function markdownFilename(note: Note) {
   const title = note.title.trim() || "untitled-note";
   const safeTitle = title
@@ -85,7 +146,8 @@ export async function saveNotesAsMarkdown(notes: Note[], folders: Folder[]) {
   ).showDirectoryPicker;
   if (!picker)
     throw new Error("Your browser does not support saving to a local folder.");
-  const parent = await picker();
+  const parent = (await getDirectoryHandle()) || (await picker());
+  await rememberDirectoryHandle(parent);
   const notesDirectory = await parent.getDirectoryHandle("notes", {
     create: true,
   });
